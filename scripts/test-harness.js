@@ -1,7 +1,8 @@
 // Loads the COMPILED extension with a mocked `vscode` module and exercises the real code paths.
 const Module = require('module');
+const path = require('path');
 
-const EXT = '/config/workspace/workspace-theme/out/extension.js';
+const EXT = path.resolve(__dirname, '..', 'out', 'extension.js');
 
 let failures = 0;
 function check(name, cond, extra) {

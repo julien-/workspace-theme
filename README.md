@@ -2,6 +2,11 @@
 
 Apply a **full color theme per workspace folder**, from a single map you keep in your user settings.
 
+![CI](https://github.com/julien-/workspace-theme/actions/workflows/ci.yml/badge.svg)
+![VS Code](https://img.shields.io/badge/VS%20Code-1.70%2B-blue)
+![TypeScript](https://img.shields.io/badge/TypeScript-5-blue)
+![License](https://img.shields.io/badge/license-MIT-green)
+
 VS Code's theme picker only writes one global theme. This extension lets each folder have its **own** complete `workbench.colorTheme` - editor background, syntax colors, everything: open one project and you get one theme, open another and you get a different one. Each window keeps its own theme, and no two windows fight over it. It pairs nicely with code-server's `?folder=` URLs, but works anywhere VS Code does.
 
 ## How it works
@@ -46,6 +51,20 @@ Open your `settings.json` (the **Edit mapping** command) and a `▶ Set theme` a
 ```
 
 Click it to run **Set workspace theme** pre-targeted to that line's folder (the chooser is skipped). It is the per-row action the Settings GUI cannot offer, because an `object` setting renders as a single tile with no per-line controls.
+
+## Install
+
+Grab the `.vsix` from the [latest release](https://github.com/julien-/workspace-theme/releases) (CI builds and attaches it on every `v*` tag), or package it yourself - then install:
+
+```bash
+# package locally (optional)
+npx @vscode/vsce package
+
+# install
+code --install-extension workspace-theme-*.vsix
+# or, for code-server:
+code-server --install-extension workspace-theme-*.vsix
+```
 
 ## Notes
 

@@ -1,6 +1,7 @@
 src/**
 scripts/**
 test/**
+.github/**
 node_modules/**
 tsconfig.json
 .vscode/**
