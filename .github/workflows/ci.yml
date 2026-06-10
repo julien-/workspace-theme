@@ -6,6 +6,7 @@ on:
     tags: ['v*']
   pull_request:
     branches: [main]
+  workflow_dispatch: {}
 
 jobs:
   test:
@@ -19,9 +20,9 @@ jobs:
       - run: npm test
 
   release:
-    # Build the .vsix and attach it to a GitHub Release when a v* tag is pushed.
+    # Package + publish on a v* tag, or on a manual run (Actions -> Run workflow).
     needs: test
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -31,17 +32,23 @@ jobs:
         with:
           node-version: 20
       - run: npm ci
+      - name: Resolve vsix name from package.json version
+        id: ver
+        run: echo "vsix=workspace-theme-$(node -p "require('./package.json').version").vsix" >> "$GITHUB_OUTPUT"
       - name: Package VSIX
-        run: npx --yes @vscode/vsce package --no-dependencies -o workspace-theme-${{ github.ref_name }}.vsix
-      - name: Create GitHub Release with the VSIX
+        run: npx --yes @vscode/vsce package --no-dependencies -o "${{ steps.ver.outputs.vsix }}"
+      - name: Publish to Open VSX
+        run: npx --yes ovsx publish "${{ steps.ver.outputs.vsix }}" -p "${{ secrets.OVSX_PAT }}"
+      - name: Create GitHub Release with the VSIX (tags only)
+        if: startsWith(github.ref, 'refs/tags/v')
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "${{ github.ref_name }}" workspace-theme-*.vsix \
+          gh release create "${{ github.ref_name }}" "${{ steps.ver.outputs.vsix }}" \
             --title "${{ github.ref_name }}" \
-            --notes "Download the .vsix below and install it:
+            --notes "Install from Open VSX (Extensions panel), or grab the .vsix below:
           \`\`\`
-          code --install-extension workspace-theme-${{ github.ref_name }}.vsix
+          code --install-extension ${{ steps.ver.outputs.vsix }}
           # or, for code-server:
-          code-server --install-extension workspace-theme-${{ github.ref_name }}.vsix
+          code-server --install-extension ${{ steps.ver.outputs.vsix }}
           \`\`\`"
