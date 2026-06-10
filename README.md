@@ -3,6 +3,7 @@
 Apply a **full color theme per workspace folder**, from a single map you keep in your user settings.
 
 ![CI](https://github.com/julien-/workspace-theme/actions/workflows/ci.yml/badge.svg)
+![Open VSX](https://img.shields.io/open-vsx/v/julien-/workspace-theme?label=Open%20VSX)
 ![VS Code](https://img.shields.io/badge/VS%20Code-1.70%2B-blue)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
@@ -54,7 +55,9 @@ Click it to run **Set workspace theme** pre-targeted to that line's folder (the 
 
 ## Install
 
-Grab the `.vsix` from the [latest release](https://github.com/julien-/workspace-theme/releases) (CI builds and attaches it on every `v*` tag), or package it yourself - then install:
+**From the Extensions panel** (code-server / VSCodium, which use [Open VSX](https://open-vsx.org/extension/julien-/workspace-theme)): search for **Workspace Theme** and click Install.
+
+Or grab the `.vsix` from the [latest release](https://github.com/julien-/workspace-theme/releases) (CI builds and attaches it on every `v*` tag), or package it yourself - then install:
 
 ```bash
 # package locally (optional)
