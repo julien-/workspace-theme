@@ -1,0 +1,23 @@
+services:
+  code:
+    image: codercom/code-server:latest
+    command: ["--auth","none","--bind-addr","0.0.0.0:8080","--disable-telemetry","--disable-update-check","--disable-workspace-trust","--user-data-dir","/ud","--extensions-dir","/ext","/ws/aaa"]
+    volumes:
+      - /config/workspace/wt-test/extensions:/ext
+      - /config/workspace/wt-test/userdata:/ud
+      - /config/workspace/wt-test/ws:/ws
+    expose: ["8080"]
+
+  chrome:
+    image: selenium/standalone-chromium:latest
+    shm_size: "2g"
+    expose: ["4444"]
+
+  tester:
+    image: python:3.12-slim
+    depends_on: [code, chrome]
+    volumes:
+      - /config/workspace/wt-test/test:/test
+      - /config/workspace/wt-test/ws:/ws
+      - /config/workspace/wt-test/userdata:/ud
+    command: ["sh","-c","pip install --quiet selenium >/dev/null 2>&1 && python /test/run.py"]

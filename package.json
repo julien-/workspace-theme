@@ -1,0 +1,77 @@
+{
+  "name": "workspace-theme",
+  "displayName": "Workspace Theme",
+  "description": "Apply a full color theme per workspace folder, from a single path-to-theme map in your user settings.",
+  "version": "1.0.0",
+  "publisher": "julien-",
+  "license": "MIT",
+  "icon": "icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/julien-/workspace-theme"
+  },
+  "engines": {
+    "vscode": "^1.70.0"
+  },
+  "categories": [
+    "Themes",
+    "Other"
+  ],
+  "keywords": [
+    "theme",
+    "color theme",
+    "workspace",
+    "per-workspace"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "workspaceTheme.pickThemeForWorkspace",
+        "title": "Workspace Theme: Set workspace theme"
+      },
+      {
+        "command": "workspaceTheme.useGlobalTheme",
+        "title": "Workspace Theme: Delete workspace theme"
+      },
+      {
+        "command": "workspaceTheme.editMapping",
+        "title": "Workspace Theme: Edit mapping"
+      }
+    ],
+    "configuration": {
+      "title": "Workspace Theme",
+      "properties": {
+        "workspaceTheme.themes": {
+          "type": "object",
+          "default": {},
+          "scope": "application",
+          "markdownDescription": "**Quick actions:** [Set workspace theme](command:workspaceTheme.pickThemeForWorkspace) | [Delete workspace theme](command:workspaceTheme.useGlobalTheme) | [Edit mapping](command:workspaceTheme.editMapping)\n\n___\n\nMap of folder path (or path prefix) to a color theme label. When a matching folder is opened, that full theme is written to the folder's workspace settings. Longest-prefix match wins, so `/home/you` can set a default while `/home/you/project-b` overrides it.\n\nExample:\n```json\n{\n  \"/home/you/project-a\": \"Mint Green\",\n  \"/home/you/project-b\": \"Tomorrow Night Blue\"\n}\n```",
+          "additionalProperties": {
+            "type": "string",
+            "markdownDescription": "Color theme label exactly as it appears in the theme picker (e.g. \"Mint Green\"). Tip: use **Set workspace theme** to choose it with a live preview instead of typing it here."
+          }
+        },
+        "workspaceTheme.autoGitExclude": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Because applying a per-workspace theme creates/edits `.vscode/settings.json` **inside the project folder** - a file that is usually part of a shared git repo - this keeps your personal theme from being committed. When that file is not already ignored, it is added to `.git/info/exclude` (a **local, untracked** ignore that never modifies the shared `.gitignore`). Turn this off if you actually want the workspace theme committed to the repo."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "test": "npm run compile && node scripts/test-harness.js"
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.0",
+    "@types/vscode": "^1.70.0",
+    "typescript": "^5.0.0"
+  }
+}
