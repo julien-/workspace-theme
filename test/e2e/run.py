@@ -72,6 +72,16 @@ def run_command(driver, name):
     inp.send_keys(Keys.ENTER)
     time.sleep(1.0)
 
+def qp_rows(driver, timeout=10):
+    """Return the visible text of each row in the currently open quick pick (empty list if none)."""
+    try:
+        WebDriverWait(driver, timeout).until(EC.visibility_of_element_located((By.CSS_SELECTOR, ".quick-input-widget")))
+    except Exception:
+        return []
+    time.sleep(1.0)  # let the list render
+    rows = driver.find_elements(By.CSS_SELECTOR, ".quick-input-widget .monaco-list-row")
+    return [r.text for r in rows if r.text.strip()]
+
 def shot(driver, name):
     try:
         driver.save_screenshot(f"/test/{name}.png")
@@ -124,6 +134,43 @@ def main():
               f"map={themes2}")
 
         print("\nMAP NOW: " + json.dumps(themes2), flush=True)
+
+        # ---------- TEST C: Delete workspace theme OPENS A CHOOSER (the regression) ----------
+        # The bug report: clicking "Delete workspace theme" deleted the current window's entry
+        # silently instead of opening a workspace chooser. Assert the chooser appears and lists
+        # the mapped folders.
+        run_command(driver, "Delete workspace theme")
+        shot(driver, "07_delete_chooser")
+        rows = qp_rows(driver)
+        print("DELETE CHOOSER ROWS: " + json.dumps(rows), flush=True)
+        check("C: delete opens a chooser (quick pick is visible)", len(rows) > 0,
+              f"rows={rows}")
+        joined = " ".join(rows)
+        check("C: chooser lists the mapped folders (/ws/aaa and /ws/bbb)",
+              "/ws/aaa" in joined and "/ws/bbb" in joined, f"rows={rows}")
+
+        # Pick the OTHER folder (/ws/bbb) -> its map entry is removed, current window untouched.
+        type_and_enter(driver, "/ws/bbb", settle=1.5)
+        time.sleep(2.0)
+        shot(driver, "08_after_delete_bbb")
+        usr3 = read_json("/ud/User/settings.json")
+        themes3 = usr3.get("workspaceTheme.themes") or {}
+        print("MAP AFTER DELETE: " + json.dumps(themes3), flush=True)
+        check("C: themes[/ws/bbb] removed", "/ws/bbb" not in themes3, f"map={themes3}")
+        check("C: themes[/ws/aaa] kept", themes3.get("/ws/aaa") == "Abyss", f"map={themes3}")
+
+        # ---------- TEST D: Delete the CURRENT window (/ws/aaa) -> clears its workspace override ----------
+        run_command(driver, "Delete workspace theme")
+        shot(driver, "09_delete_chooser_2")
+        type_and_enter(driver, "/ws/aaa", settle=1.5)
+        time.sleep(2.0)
+        shot(driver, "10_after_delete_aaa")
+        usr4 = read_json("/ud/User/settings.json")
+        themes4 = usr4.get("workspaceTheme.themes") or {}
+        aaa_ws2 = read_json("/ws/aaa/.vscode/settings.json").get("workbench.colorTheme")
+        check("D: themes[/ws/aaa] removed", "/ws/aaa" not in themes4, f"map={themes4}")
+        check("D: aaa workspace colorTheme override cleared", aaa_ws2 is None,
+              f"aaa colorTheme={aaa_ws2}")
     except Exception as e:
         traceback.print_exc()
         shot(driver, "99_error")

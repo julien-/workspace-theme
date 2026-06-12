@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.1
+
+- **Delete workspace theme** now opens a chooser to pick which mapped folder to remove (mirroring **Set workspace theme**), instead of silently deleting the current window's entry. Deleting the current window's mapping still clears its workspace override so it reverts to the global theme immediately.
+- Each entry in the `settings.json` map now also shows a `✖ Delete` CodeLens next to `▶ Set theme`.
+
 ## 1.0.0
 
 First release.

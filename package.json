@@ -2,7 +2,7 @@
   "name": "workspace-theme",
   "displayName": "Workspace Theme",
   "description": "Apply a full color theme per workspace folder, from a single path-to-theme map in your user settings.",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "publisher": "julien-",
   "license": "MIT",
   "icon": "icon.png",
@@ -34,7 +34,7 @@
         "title": "Workspace Theme: Set workspace theme"
       },
       {
-        "command": "workspaceTheme.useGlobalTheme",
+        "command": "workspaceTheme.deleteThemeForWorkspace",
         "title": "Workspace Theme: Delete workspace theme"
       },
       {
@@ -49,7 +49,7 @@
           "type": "object",
           "default": {},
           "scope": "application",
-          "markdownDescription": "**Quick actions:** [Set workspace theme](command:workspaceTheme.pickThemeForWorkspace) | [Delete workspace theme](command:workspaceTheme.useGlobalTheme) | [Edit mapping](command:workspaceTheme.editMapping)\n\n___\n\nMap of folder path (or path prefix) to a color theme label. When a matching folder is opened, that full theme is written to the folder's workspace settings. Longest-prefix match wins, so `/home/you` can set a default while `/home/you/project-b` overrides it.\n\nExample:\n```json\n{\n  \"/home/you/project-a\": \"Mint Green\",\n  \"/home/you/project-b\": \"Tomorrow Night Blue\"\n}\n```",
+          "markdownDescription": "**Quick actions:** [Set workspace theme](command:workspaceTheme.pickThemeForWorkspace) | [Delete workspace theme](command:workspaceTheme.deleteThemeForWorkspace) | [Edit mapping](command:workspaceTheme.editMapping)\n\n___\n\nMap of folder path (or path prefix) to a color theme label. When a matching folder is opened, that full theme is written to the folder's workspace settings. Longest-prefix match wins, so `/home/you` can set a default while `/home/you/project-b` overrides it.\n\nExample:\n```json\n{\n  \"/home/you/project-a\": \"Mint Green\",\n  \"/home/you/project-b\": \"Tomorrow Night Blue\"\n}\n```",
           "additionalProperties": {
             "type": "string",
             "markdownDescription": "Color theme label exactly as it appears in the theme picker (e.g. \"Mint Green\"). Tip: use **Set workspace theme** to choose it with a live preview instead of typing it here."

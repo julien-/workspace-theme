@@ -240,41 +240,70 @@ async function pickThemeForWorkspace(targetPathArg?: string): Promise<void> {
 	vscode.window.showInformationMessage(`Workspace Theme: ${targetPath} -> ${chosen}`);
 }
 
-async function useGlobalTheme(): Promise<void> {
-	const folder = currentFolder();
-	if (!folder) {
-		vscode.window.showWarningMessage('Workspace Theme: open a folder first.');
-		return;
-	}
-
-	const wb = vscode.workspace.getConfiguration('workbench', folder.uri);
-	const insp = wb.inspect<string>('colorTheme');
-	const hadWorkspaceOverride = insp?.workspaceValue !== undefined;
-
-	// Remove the workspace-scoped override so the global theme takes over again.
-	if (hadWorkspaceOverride) {
-		await wb.update('colorTheme', undefined, vscode.ConfigurationTarget.Workspace);
-	}
-
-	// Drop the entry from the central map so it is not re-applied on the next open.
+/**
+ * Delete a workspace's theme mapping. Mirrors pickThemeForWorkspace: an explicit target arg
+ * (e.g. from the settings.json CodeLens) is used directly, otherwise a chooser lists every
+ * mapped folder so the user picks which entry to remove. If the deleted folder is the window we
+ * are in, its workspace-scoped override is cleared too so the global theme takes back over right
+ * away instead of only on the next open.
+ */
+async function deleteThemeForWorkspace(targetPathArg?: string): Promise<void> {
 	const cfg = vscode.workspace.getConfiguration(CONFIG_SECTION);
 	const map: ThemeMap = { ...(cfg.get<ThemeMap>('themes') ?? {}) };
-	const hadMapping = map[folder.uri.fsPath] !== undefined;
-	if (hadMapping) {
-		delete map[folder.uri.fsPath];
-		await cfg.update('themes', map, vscode.ConfigurationTarget.Global);
-	}
+	const keys = Object.keys(map);
 
-	if (!hadWorkspaceOverride && !hadMapping) {
-		vscode.window.showInformationMessage(`Workspace Theme: ${folder.name} already follows the global theme.`);
+	if (keys.length === 0) {
+		vscode.window.showInformationMessage('Workspace Theme: no mapped workspaces to delete.');
 		return;
 	}
 
-	const globalTheme = insp?.globalValue ?? 'the default';
-	vscode.window.showInformationMessage(`Workspace Theme: ${folder.name} now follows the global theme (${globalTheme}).`);
+	const current = currentFolder();
+	const currentPath = current ? stripTrailingSlash(current.uri.fsPath) : undefined;
+
+	// Resolve the target: an explicit arg (CodeLens) skips the chooser; otherwise list every
+	// mapped folder, flagging the current window and showing each folder's theme.
+	let targetPath: string;
+	if (typeof targetPathArg === 'string' && targetPathArg.length > 0) {
+		targetPath = stripTrailingSlash(targetPathArg);
+	} else {
+		const items: vscode.QuickPickItem[] = keys.map((key) => ({
+			label: key,
+			description: (stripTrailingSlash(key) === currentPath ? 'this window - ' : '') + map[key],
+		}));
+		const target = await vscode.window.showQuickPick(items, {
+			placeHolder: 'Which workspace mapping should be deleted?',
+		});
+		if (!target) {
+			return;
+		}
+		targetPath = stripTrailingSlash(target.label);
+	}
+
+	// The map may key the entry with a trailing slash; match leniently.
+	const mapKey = keys.find((k) => stripTrailingSlash(k) === targetPath);
+	if (mapKey === undefined) {
+		vscode.window.showWarningMessage(`Workspace Theme: no mapping found for ${targetPath}.`);
+		return;
+	}
+	delete map[mapKey];
+	await cfg.update('themes', map, vscode.ConfigurationTarget.Global);
+
+	// If we deleted the mapping for the window we are in, drop its workspace override too.
+	if (current && currentPath === targetPath) {
+		const wb = vscode.workspace.getConfiguration('workbench', current.uri);
+		const insp = wb.inspect<string>('colorTheme');
+		if (insp?.workspaceValue !== undefined) {
+			await wb.update('colorTheme', undefined, vscode.ConfigurationTarget.Workspace);
+		}
+		const globalTheme = insp?.globalValue ?? 'the default';
+		vscode.window.showInformationMessage(`Workspace Theme: ${targetPath} now follows the global theme (${globalTheme}).`);
+		return;
+	}
+
+	vscode.window.showInformationMessage(`Workspace Theme: deleted mapping for ${targetPath}.`);
 }
 
-/** Puts a "▶ Set theme" action above each entry of the themes map in settings.json. */
+/** Puts "▶ Set theme" and "✖ Delete" actions above each entry of the themes map in settings.json. */
 class ThemesCodeLensProvider implements vscode.CodeLensProvider {
 	provideCodeLenses(document: vscode.TextDocument): vscode.CodeLens[] {
 		try {
@@ -321,6 +350,11 @@ class ThemesCodeLensProvider implements vscode.CodeLensProvider {
 					title: '▶ Set theme',
 					command: 'workspaceTheme.pickThemeForWorkspace',
 					arguments: [path],
+				}),
+				new vscode.CodeLens(new vscode.Range(pos.line, 0, pos.line, 0), {
+					title: '✖ Delete',
+					command: 'workspaceTheme.deleteThemeForWorkspace',
+					arguments: [path],
 				})
 			);
 		}
@@ -340,7 +374,9 @@ export function activate(context: vscode.ExtensionContext): void {
 		vscode.commands.registerCommand('workspaceTheme.pickThemeForWorkspace', (targetPath?: string) =>
 			pickThemeForWorkspace(targetPath)
 		),
-		vscode.commands.registerCommand('workspaceTheme.useGlobalTheme', useGlobalTheme),
+		vscode.commands.registerCommand('workspaceTheme.deleteThemeForWorkspace', (targetPath?: string) =>
+			deleteThemeForWorkspace(targetPath)
+		),
 		vscode.commands.registerCommand('workspaceTheme.editMapping', () =>
 			vscode.commands.executeCommand('workbench.action.openSettingsJson')
 		),

@@ -30,7 +30,7 @@ The value is the theme label exactly as it appears in the theme picker (e.g. `Mi
 | Command | What it does |
 |---------|--------------|
 | **Workspace Theme: Set workspace theme** | Pick a target (the current window, any mapped folder, or a new path), then the built-in theme picker opens with full live preview on the current window. Your choice is saved to the target's map entry; if the target was a different folder, the current window is restored to its own theme. |
-| **Workspace Theme: Delete workspace theme** | Reverts the current folder to the global theme: removes its `workbench.colorTheme` and its entry from the map. |
+| **Workspace Theme: Delete workspace theme** | Pick which mapped folder to remove (a chooser like **Set workspace theme**), then its entry is dropped from the map. If you delete the current window's mapping, its `workbench.colorTheme` override is also removed so it reverts to the global theme right away. |
 | **Workspace Theme: Edit mapping** | Opens your `settings.json` at the map. |
 
 ## Settings
@@ -42,16 +42,16 @@ The value is the theme label exactly as it appears in the theme picker (e.g. `Mi
 
 ## settings.json CodeLens
 
-Open your `settings.json` (the **Edit mapping** command) and a `▶ Set theme` action appears above each entry of the map:
+Open your `settings.json` (the **Edit mapping** command) and `▶ Set theme` / `✖ Delete` actions appear above each entry of the map:
 
 ```
-▶ Set theme
+▶ Set theme  ✖ Delete
 "/home/you/project-a": "Mint Green",
-▶ Set theme
+▶ Set theme  ✖ Delete
 "/home/you/project-b": "Tomorrow Night Blue",
 ```
 
-Click it to run **Set workspace theme** pre-targeted to that line's folder (the chooser is skipped). It is the per-row action the Settings GUI cannot offer, because an `object` setting renders as a single tile with no per-line controls.
+Click **Set theme** to run **Set workspace theme** pre-targeted to that line's folder, or **Delete** to remove that entry (both skip the chooser). They are the per-row actions the Settings GUI cannot offer, because an `object` setting renders as a single tile with no per-line controls.
 
 ## Install
 

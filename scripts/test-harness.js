@@ -96,8 +96,9 @@ let threw = null;
 try { ext.activate(context); } catch (e) { threw = e; }
 check('activate() does not throw', threw === null);
 check('registers exactly 3 commands', Object.keys(registered).length === 3, JSON.stringify(Object.keys(registered)));
-['pickThemeForWorkspace', 'useGlobalTheme', 'editMapping'].forEach((c) =>
+['pickThemeForWorkspace', 'deleteThemeForWorkspace', 'editMapping'].forEach((c) =>
 	check(`command workspaceTheme.${c} registered`, !!registered['workspaceTheme.' + c]));
+check('removed: useGlobalTheme', !registered['workspaceTheme.useGlobalTheme']);
 check('removed: setForThisWorkspace', !registered['workspaceTheme.setForThisWorkspace']);
 check('removed: openWorkspaceAndPickTheme', !registered['workspaceTheme.openWorkspaceAndPickTheme']);
 check('registers a CodeLens provider', !!codeLensProvider);
@@ -114,10 +115,11 @@ const settings = `{
 }`;
 const doc = { getText: () => settings, positionAt: (o) => ({ line: settings.slice(0, o).split('\n').length - 1, character: 0 }) };
 const lenses = codeLensProvider.provideCodeLenses(doc);
-check('CodeLens: exactly 2 lenses', lenses.length === 2);
-check('CodeLens: paths captured as args', lenses[0].command.arguments[0] === '/config/workspace/aaa' && lenses[1].command.arguments[0] === '/config/workspace/bbb');
-check('CodeLens: command -> pickThemeForWorkspace', lenses[0].command.command === 'workspaceTheme.pickThemeForWorkspace');
-check('CodeLens: lines correct', lenses[0].range.startLine === 3 && lenses[1].range.startLine === 4);
+check('CodeLens: exactly 4 lenses (set + delete per entry)', lenses.length === 4);
+check('CodeLens: paths captured as args', lenses[0].command.arguments[0] === '/config/workspace/aaa' && lenses[2].command.arguments[0] === '/config/workspace/bbb');
+check('CodeLens: set command -> pickThemeForWorkspace', lenses[0].command.command === 'workspaceTheme.pickThemeForWorkspace');
+check('CodeLens: delete command -> deleteThemeForWorkspace', lenses[1].command.command === 'workspaceTheme.deleteThemeForWorkspace' && lenses[1].command.arguments[0] === '/config/workspace/aaa');
+check('CodeLens: lines correct', lenses[0].range.startLine === 3 && lenses[2].range.startLine === 4);
 check('CodeLens: [] when key absent', codeLensProvider.provideCodeLenses({ getText: () => '{"a":1}', positionAt: () => ({ line: 0 }) }).length === 0);
 
 (async () => {
@@ -163,6 +165,45 @@ check('CodeLens: [] when key absent', codeLensProvider.provideCodeLenses({ getTe
 	await pick();
 	check('cancel: map unchanged', JSON.stringify(store.wt.themes) === JSON.stringify({ '/ws/aaa': 'AaaTheme' }));
 	check('cancel: workspace theme unchanged', store.wbWorkspace === 'AaaWsTheme');
+
+	const del = registered['workspaceTheme.deleteThemeForWorkspace'];
+
+	// ---- Test 7: delete CURRENT window via chooser -> removes entry + clears override ----
+	currentFolders = [{ uri: { fsPath: '/ws/aaa', scheme: 'file' }, name: 'aaa' }];
+	store.wt.themes = { '/ws/aaa': 'AaaTheme', '/ws/bbb': 'BbbTheme' };
+	store.wbGlobal = 'GlobalTheme'; store.wbWorkspace = 'AaaTheme';
+	vscodeMock.__quickPickAnswer = { label: '/ws/aaa' };
+	await del();
+	check('delete-current: map entry removed', store.wt.themes['/ws/aaa'] === undefined, JSON.stringify(store.wt.themes));
+	check('delete-current: other entry kept', store.wt.themes['/ws/bbb'] === 'BbbTheme');
+	check('delete-current: workspace override cleared', store.wbWorkspace === undefined, String(store.wbWorkspace));
+
+	// ---- Test 8: delete OTHER folder via chooser -> only its entry, current window untouched ----
+	currentFolders = [{ uri: { fsPath: '/ws/aaa', scheme: 'file' }, name: 'aaa' }];
+	store.wt.themes = { '/ws/aaa': 'AaaTheme', '/ws/bbb': 'BbbTheme' };
+	store.wbWorkspace = 'AaaTheme';
+	vscodeMock.__quickPickAnswer = { label: '/ws/bbb' };
+	await del();
+	check('delete-other: target entry removed', store.wt.themes['/ws/bbb'] === undefined, JSON.stringify(store.wt.themes));
+	check('delete-other: current entry kept', store.wt.themes['/ws/aaa'] === 'AaaTheme');
+	check('delete-other: current window override untouched', store.wbWorkspace === 'AaaTheme');
+
+	// ---- Test 9: delete via CodeLens arg skips the chooser ----
+	currentFolders = [{ uri: { fsPath: '/ws/aaa', scheme: 'file' }, name: 'aaa' }];
+	store.wt.themes = { '/ws/aaa': 'AaaTheme', '/ws/bbb': 'BbbTheme' };
+	store.wbWorkspace = 'AaaTheme';
+	vscodeMock.__quickPickAnswer = undefined; // chooser must NOT be needed
+	await del('/ws/bbb');
+	check('delete-arg: target removed without chooser', store.wt.themes['/ws/bbb'] === undefined && store.wt.themes['/ws/aaa'] === 'AaaTheme', JSON.stringify(store.wt.themes));
+
+	// ---- Test 10: delete cancelled (no chooser answer) changes nothing ----
+	currentFolders = [{ uri: { fsPath: '/ws/aaa', scheme: 'file' }, name: 'aaa' }];
+	store.wt.themes = { '/ws/aaa': 'AaaTheme' };
+	store.wbWorkspace = 'AaaTheme';
+	vscodeMock.__quickPickAnswer = undefined;
+	await del();
+	check('delete-cancel: map unchanged', store.wt.themes['/ws/aaa'] === 'AaaTheme');
+	check('delete-cancel: override unchanged', store.wbWorkspace === 'AaaTheme');
 
 	console.log(`\n${failures === 0 ? 'ALL PASS' : failures + ' FAILURE(S)'}`);
 	process.exit(failures === 0 ? 0 : 1);
